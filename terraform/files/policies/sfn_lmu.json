@@ -1,0 +1,38 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "SfnLmuRds",
+            "Effect": "Allow",
+            "Action": [
+                "rds:DescribeDBSnapshots",
+                "rds:CreateDBSnapshot",
+                "rds:StartExportTask",
+                "rds:DescribeDBInstances",
+                "rds:DeleteDBSnapshot"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Sid": "SfnLmuKms",
+            "Effect": "Allow",
+            "Action": [
+                "kms:DescribeKey",
+                "kms:CreateGrant"
+            ],
+            "Resource": [
+                "arn:aws:kms:us-east-2:471379067324:key/dcc53c30-1824-4e30-bdc8-953d6d451dfd"
+            ]
+        },
+        {
+            "Sid": "SfnLmuIam",
+            "Effect": "Allow",
+            "Action": [
+                "iam:PassRole"
+            ],
+            "Resource": [
+                "arn:aws:iam::471379067324:role/lmu-sfn-2-bb"
+            ]
+        }
+    ]
+}

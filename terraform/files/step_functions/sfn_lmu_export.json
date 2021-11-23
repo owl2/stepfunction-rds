@@ -1,0 +1,99 @@
+{
+  "Comment": "State Machine to export RDS Snapshots to S3",
+  "StartAt": "DeleteDBSnapshot",
+  "States": {
+    "DeleteDBSnapshot": {
+      "Type": "Task",
+      "Next": "delete verif",
+      "Parameters": {
+        "DbSnapshotIdentifier.$": "$.DbSnapshotIdentifier"
+      },
+      "Resource": "arn:aws:states:::aws-sdk:rds:deleteDBSnapshot",
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "Comment": "Pass if not exists",
+          "Next": "CreateDBSnapshot",
+          "ResultPath": null
+        }
+      ],
+      "ResultPath": null
+    },
+    "delete verif": {
+      "Type": "Task",
+      "Next": "Wait (1)",
+      "Parameters": {
+        "DbSnapshotIdentifier.$": "$.DbSnapshotIdentifier"
+      },
+      "Resource": "arn:aws:states:::aws-sdk:rds:describeDBSnapshots",
+      "ResultPath": "$.deleteVerifResult",
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "Comment": "snapshot not found",
+          "Next": "CreateDBSnapshot",
+          "ResultPath": null
+        }
+      ]
+    },
+    "CreateDBSnapshot": {
+      "Type": "Task",
+      "Parameters": {
+        "DbInstanceIdentifier.$": "$.DbInstanceIdentifier",
+        "DbSnapshotIdentifier.$": "$.DbSnapshotIdentifier"
+      },
+      "Resource": "arn:aws:states:::aws-sdk:rds:createDBSnapshot",
+      "Next": "DescribeDBSnapshots",
+      "ResultPath": "$.CreateSnapshotResult"
+    },
+    "DescribeDBSnapshots": {
+      "Type": "Task",
+      "Next": "Choice",
+      "Parameters": {
+        "DbSnapshotIdentifier.$": "$.DbSnapshotIdentifier"
+      },
+      "Resource": "arn:aws:states:::aws-sdk:rds:describeDBSnapshots",
+      "ResultPath": "$.DescribeDBSnapshotsResult"
+    },
+    "Choice": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Not": {
+            "Variable": "$.DescribeDBSnapshotsResult.DbSnapshots[0].Status",
+            "StringEquals": "available"
+          },
+          "Next": "Wait"
+        }
+      ],
+      "Default": "StartExportTask"
+    },
+    "StartExportTask": {
+      "Type": "Task",
+      "End": true,
+      "Parameters": {
+        "ExportTaskIdentifier.$": "$.ExportTaskIdentifier",
+        "IamRoleArn.$": "$.IamRoleArn",
+        "KmsKeyId.$": "$.KmsKeyId",
+        "S3BucketName.$": "$.S3BucketName",
+        "SourceArn.$": "$.DescribeDBSnapshotsResult.DbSnapshots[0].DbSnapshotArn"
+      },
+      "Resource": "arn:aws:states:::aws-sdk:rds:startExportTask"
+    },
+    "Wait": {
+      "Type": "Wait",
+      "Seconds": 10,
+      "Next": "DescribeDBSnapshots",
+      "Comment": "Check the snapshot execution"
+    },
+    "Wait (1)": {
+      "Type": "Wait",
+      "Seconds": 5,
+      "Next": "delete verif"
+    }
+  }
+}

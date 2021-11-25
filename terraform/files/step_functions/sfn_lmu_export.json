@@ -74,7 +74,6 @@
     },
     "StartExportTask": {
       "Type": "Task",
-      "End": true,
       "Parameters": {
         "ExportTaskIdentifier.$": "$.ExportTaskIdentifier",
         "IamRoleArn.$": "$.IamRoleArn",
@@ -82,7 +81,39 @@
         "S3BucketName.$": "$.S3BucketName",
         "SourceArn.$": "$.DescribeDBSnapshotsResult.DbSnapshots[0].DbSnapshotArn"
       },
-      "Resource": "arn:aws:states:::aws-sdk:rds:startExportTask"
+      "Resource": "arn:aws:states:::aws-sdk:rds:startExportTask",
+      "Next": "DescribeExportTasks"
+    },
+    "DescribeExportTasks": {
+      "Type": "Task",
+      "Parameters": {
+        "SourceArn.$": "$.DescribeDBSnapshotsResult.DbSnapshots[0].DbSnapshotArn"
+      },
+      "Resource": "arn:aws:states:::aws-sdk:rds:describeExportTasks",
+      "Next": "Choice (1)",
+      "ResultPath": "$.DescribeExportTasks"
+    },
+    "Choice (1)": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Not": {
+            "Variable": "$.DescribeExportTasks.Status",
+            "StringEquals": "\"available\""
+          },
+          "Next": "Wait (2)"
+        }
+      ],
+      "Default": "Pass"
+    },
+    "Pass": {
+      "Type": "Pass",
+      "End": true
+    },
+    "Wait (2)": {
+      "Type": "Wait",
+      "Seconds": 180,
+      "Next": "Choice (1)"
     },
     "Wait": {
       "Type": "Wait",
